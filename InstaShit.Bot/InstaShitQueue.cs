@@ -23,7 +23,7 @@ namespace InstaShit.Bot
             if (File.Exists(Path.Combine(assemblyLocation, "queue.json")))
             {
                 usersQueue = JsonConvert.DeserializeObject<Queue<QueueEntry>>(File.ReadAllText(Path.Combine(assemblyLocation, "queue.json")));
-                if (DateTime.UtcNow.Hour > 8)
+                if (DateTime.UtcNow.Hour >= 8)
                     dateTime = DateTime.UtcNow.Date;
             }
             else
@@ -83,7 +83,7 @@ namespace InstaShit.Bot
                             messageToSend.AppendLine($"Mark from previous week: {childResults.PreviousMark}");
                         }
                         messageToSend.AppendLine($"Days of work in this week: {childResults.DaysOfWork}");
-                        messageToSend.AppendLine($"From extracurricular words: {childResults.ExtraParentWords}");
+                        messageToSend.AppendLine($"From extracurricular words: +{childResults.ExtraParentWords}");
                         messageToSend.AppendLine($"Teacher's words: {childResults.TeacherWords}");
                         messageToSend.AppendLine($"Extracurricular words in current edition: {childResults.ParentWords}");
                         messageToSend.AppendLine($"Mark as of today at least: {childResults.CurrrentMark}");

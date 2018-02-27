@@ -20,6 +20,7 @@ namespace InstaShit.Bot
                 UsersList.Add(user);
                 Write();
             }
+            
         }
         public static void Remove(User user)
         {

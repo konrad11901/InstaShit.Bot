@@ -24,12 +24,13 @@ namespace InstaShit.Bot
             }
             while(true)
             {
-                var answer = await GetAnswer();
+                var answer = await GetAnswerAsync();
                 if (answer == null)
                     break;
                 await Task.Delay(SleepTime);
-                await TryAnswerQuestion(answer);
+                await TryAnswerQuestionAsync(answer);
             }
+            SaveSessionData();
         }
     }
 }
