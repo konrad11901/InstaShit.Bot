@@ -46,7 +46,7 @@ namespace InstaShit.Bot
                     DateTime tmpDate = DateTime.UtcNow;
                     foreach (User user in users)
                     {
-                        tmpDate = tmpDate.AddMinutes(rnd.Next(20, 40));
+                        tmpDate = tmpDate.AddMinutes(rnd.Next(20, 41)).AddSeconds(rnd.Next(0, 60));
                         usersQueue.Enqueue(new QueueEntry() { User = user, ProcessTime = tmpDate });
                         Log.Add(DateTime.UtcNow + $": Queued user {user.Login} at {tmpDate}");
                         await Communication.SendMessageAsync(user.UserId, "Your InstaShit session " +
