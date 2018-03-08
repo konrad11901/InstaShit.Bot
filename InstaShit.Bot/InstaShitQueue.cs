@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -63,7 +64,7 @@ namespace InstaShit.Bot
                     if(DateTime.UtcNow >= entry.ProcessTime)
                     {
                         usersQueue.Dequeue();
-                        if (!Users.UsersList.Contains(entry.User))
+                        if (!Users.UsersList.Any(u => u.Login == entry.User.Login))
                         {
                             Directory.Delete(Path.Combine(assemblyLocation, entry.User.Login), true);
                             continue;

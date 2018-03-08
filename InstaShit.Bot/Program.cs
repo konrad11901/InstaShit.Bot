@@ -172,7 +172,7 @@ namespace InstaShit.Bot
             {
                 Login = settings.Login,
                 UserType = UserType.Telegram,
-                UserId = GetIntFromUser("User ID: ", 0, int.MaxValue)
+                UserId = GetIntFromUser("User ID", 0, int.MaxValue)
             };
             Directory.CreateDirectory(Path.Combine(assemblyLocation, user.Login));
             File.WriteAllText(Path.Combine(assemblyLocation, user.Login, "settings.json"), JsonConvert.SerializeObject(settings, Formatting.Indented));
