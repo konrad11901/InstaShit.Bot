@@ -131,9 +131,12 @@ namespace InstaShit.Bot
                         if(!userStep.ContainsKey(message.From.Id))
                         {
                             userStep.Add(message.From.Id, 1);
-                            await SendMessageAsync(message.Chat.Id, "Please attach the InstaShit settings file. " +
-                                "You can use InstaShit.CLI to generate it. Ability to create new settings directly from " +
-                                "bot coming soon!\nType /cancel to abort this action.");
+                            await SendMessageAsync(message.Chat.Id, "Please attach the InstaShit settings file.\n" +
+                                                   "You can use InstaShit.CLI to generate it. You can also " +
+                                                   "share settings directly from InstaShit.Android " +
+                                                   "(since version 0.5) - just go to \"Edit settings\", \"Advanced mode\" " +
+                                                   "and touch \"Share\" button. Ability to create new settings directly " +
+                                                   "from bot coming soon!\nType /cancel to abort this action.");
                         }
                         break;
                     case "/cancel":
