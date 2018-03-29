@@ -36,6 +36,7 @@ namespace InstaShit.Bot
             Task queueTask = queue.ProcessQueue(source.Token);
             while(true)
             {
+                Console.Write("> ");
                 string input = Console.ReadLine();
                 bool shouldBreak = false;
                 switch(input.ToLower())
@@ -49,13 +50,15 @@ namespace InstaShit.Bot
                     case "/remove":
                         RemoveUser();
                         break;
-                    case "/log":
-                        foreach (string item in queue.Log)
-                            Console.WriteLine(item);
+                    case "/broadcast":
+                        Console.WriteLine("Enter message:");
+                        var message = Console.ReadLine();
+                        foreach (User user in Users.UsersList)
+                            await Communication.SendMessageAsync(user.UserId, message);
                         break;
                     //TODO: this shouldn't be here, it's ugly
                     case "/check":
-                        if (queueTask.IsFaulted)
+                        if (queueTask.IsFaulted || queueTask.IsCanceled)
                         {
                             try
                             {

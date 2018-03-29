@@ -49,6 +49,24 @@ namespace InstaShit.Bot
                 }
             }
         }
+        private static async Task SendFileAsync(long userId, string filePath)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    await Bot.SendDocumentAsync(userId, 
+                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(new FileStream(filePath, FileMode.Open, FileAccess.Read), Path.GetFileName(filePath)), 
+                        cancellationToken: new CancellationTokenSource(10000 + (10000 * i)).Token);
+                    break;
+                }
+                catch
+                {
+                    if (i == 4)
+                        throw;
+                }
+            }
+        }
         private static async void BotOnMessageReceived(object sender, MessageEventArgs args)
         {
             Telegram.Bot.Types.Message message = args.Message;
@@ -139,6 +157,19 @@ namespace InstaShit.Bot
                                                    "from bot coming soon!\nType /cancel to abort this action.");
                         }
                         break;
+                    case "/dictionary":
+                        var user = Users.UsersList.FirstOrDefault(u => u.UserId == message.From.Id);
+                        if (user == null)
+                        {
+                            await SendMessageAsync(message.Chat.Id, "No configuration found.");
+                            return;
+                        }
+                        if (File.Exists(Path.Combine(assemblyLocation, user.Login, "wordsDictionary.json")))
+                            await SendFileAsync(message.Chat.Id, Path.Combine(assemblyLocation, user.Login, "wordsDictionary.json"));
+                        else
+                            await SendMessageAsync(message.Chat.Id, "Dictionary file doesn't exist.");
+                        break;
+                            
                     case "/cancel":
                         if (userStep.ContainsKey(message.From.Id))
                         {
@@ -172,7 +203,8 @@ namespace InstaShit.Bot
                         await SendMessageAsync(message.Chat.Id, "Usage:\n" +
                             "/configure - Configures InstaShit bot\n" +
                             "/remove - Unregisters from the bot\n" +
-                            "/cancel - Cancels any ongoing process (configure/remove)");
+                            "/cancel - Cancels any ongoing process (configure/remove)\n" +
+                            "/dictionary - Returns the wordsDictionary.json file");
                         break;
                 }
             }

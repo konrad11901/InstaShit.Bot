@@ -18,7 +18,6 @@ namespace InstaShit.Bot
         private DateTime dateTime = DateTime.UtcNow.Date.AddDays(-1);
         private Random rnd = new Random();
         private readonly object _lock = new object();
-        public List<string> Log { get; private set; } = new List<string>();
         public InstaShitQueue()
         {
             if (File.Exists(Path.Combine(assemblyLocation, "queue.json")))
@@ -41,7 +40,7 @@ namespace InstaShit.Bot
                 cancellationToken.ThrowIfCancellationRequested();
                 if (DateTime.UtcNow >= DateTime.UtcNow.Date.AddHours(8) && dateTime != DateTime.UtcNow.Date)
                 {
-                    Log.Add(DateTime.UtcNow + ": Refreshing queue...");
+                    Log.Write(DateTime.UtcNow + ": Refreshing queue...", LogType.Queue);
                     List<User> users = Users.UsersList;
                     users.Shuffle();
                     DateTime tmpDate = DateTime.UtcNow;
@@ -49,7 +48,7 @@ namespace InstaShit.Bot
                     {
                         tmpDate = tmpDate.AddMinutes(rnd.Next(20, 41)).AddSeconds(rnd.Next(0, 60));
                         usersQueue.Enqueue(new QueueEntry() { User = user, ProcessTime = tmpDate });
-                        Log.Add(DateTime.UtcNow + $": Queued user {user.Login} at {tmpDate}");
+                        Log.Write(DateTime.UtcNow + $": Queued user {user.Login} at {tmpDate}", LogType.Queue);
                         await Communication.SendMessageAsync(user.UserId, "Your InstaShit session " +
                             $"will be started at {tmpDate} UTC (with max. 1 minute delay). Please don't attempt " +
                             "to start Insta.Ling session at this time, even from other InstaShit apps. " +
@@ -70,11 +69,11 @@ namespace InstaShit.Bot
                             continue;
                         }
                         InstaShit instaShit = new InstaShit(Path.Combine(assemblyLocation, entry.User.Login));
-                        Log.Add(DateTime.UtcNow + $": Starting InstaShit for user {entry.User.Login}");
+                        Log.Write(DateTime.UtcNow + $": Starting InstaShit for user {entry.User.Login}", LogType.Queue);
                         await Communication.SendMessageAsync(entry.User.UserId, "Starting session.");
                         cancellationToken.ThrowIfCancellationRequested();
                         await instaShit.Process();
-                        Log.Add(DateTime.UtcNow + $": Session finished");
+                        Log.Write(DateTime.UtcNow + $": Session finished", LogType.Queue);
                         await Communication.SendMessageAsync(entry.User.UserId, "Session successfully " +
                             "finished.");
                         var childResults = await instaShit.GetResultsAsync();
@@ -95,7 +94,7 @@ namespace InstaShit.Bot
                     if(usersQueue.Count > 0)
                     {
                         TimeSpan span = usersQueue.Peek().ProcessTime - DateTime.UtcNow;
-                        Log.Add("Waiting " + (int)span.TotalMilliseconds + " milliseconds...");
+                        Log.Write(DateTime.UtcNow + ": Waiting " + (int)span.TotalMilliseconds + " milliseconds for next person...", LogType.Queue);
                         await Task.Delay((int)span.TotalMilliseconds, cancellationToken);
                     }
                 }
@@ -104,7 +103,7 @@ namespace InstaShit.Bot
                     span2 = DateTime.UtcNow.Date.AddHours(8) - DateTime.UtcNow;
                 else
                     span2 = DateTime.UtcNow.Date.AddDays(1).AddHours(8) - DateTime.UtcNow;
-                Log.Add("Waiting " + (int)span2.TotalMilliseconds + " milliseconds...");
+                Log.Write(DateTime.UtcNow + ": Waiting " + (int)span2.TotalMilliseconds + " milliseconds for next queue refresh...", LogType.Queue);
                 await Task.Delay((int)span2.TotalMilliseconds, cancellationToken);
             }
         }
