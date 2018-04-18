@@ -75,6 +75,24 @@ namespace InstaShit.Bot
                 }
             }
         }
+        private static async Task SendFileAsync(long userId, string filePath)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    await Bot.SendDocumentAsync(userId, 
+                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(new FileStream(filePath, FileMode.Open, FileAccess.Read), Path.GetFileName(filePath)), 
+                        cancellationToken: new CancellationTokenSource(10000 + (10000 * i)).Token);
+                    break;
+                }
+                catch
+                {
+                    if (i == 4)
+                        throw;
+                }
+            }
+        }
         private static async void BotOnMessageReceived(object sender, MessageEventArgs args)
         {
             Telegram.Bot.Types.Message message = args.Message;
