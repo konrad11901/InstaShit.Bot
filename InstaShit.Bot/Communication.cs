@@ -35,11 +35,37 @@ namespace InstaShit.Bot
         // This method is an attempt to solve the request timed out issue
         public static async Task SendMessageAsync(long userId, string message)
         {
-            for(int i = 0; i < 5; i++)
+            Log.Write($"Trying to send message \"{message}\" to user {userId.ToString()}", LogType.Communication);
+            if (userId == -1)
+            {
+                Log.Write("Skipping message because user is dummy", LogType.Communication);
+                return;
+            }
+            for (int i = 0; i < 5; i++)
             {
                 try
                 {
                     await Bot.SendTextMessageAsync(userId, message, cancellationToken: new CancellationTokenSource(5000 + (10000 * i)).Token);
+                    Log.Write("Message sent!", LogType.Communication);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Log.Write($"An error occured, retrying ({ex})", LogType.Communication);
+                    if (i == 4)
+                        throw;
+                }
+            }
+        }
+        private static async Task SendFileAsync(long userId, string filePath)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    await Bot.SendDocumentAsync(userId, 
+                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(new FileStream(filePath, FileMode.Open, FileAccess.Read), Path.GetFileName(filePath)), 
+                        cancellationToken: new CancellationTokenSource(10000 + (10000 * i)).Token);
                     break;
                 }
                 catch
@@ -115,6 +141,7 @@ namespace InstaShit.Bot
             }
             if(message.Type == MessageType.Text)
             {
+                Log.Write($"Received message from user {message.From.Id}: {message.Text}", LogType.Communication);
                 switch(message.Text.ToLower())
                 {
                     case "/start":
@@ -139,6 +166,19 @@ namespace InstaShit.Bot
                                                    "from bot coming soon!\nType /cancel to abort this action.");
                         }
                         break;
+                    case "/dictionary":
+                        var user = Users.UsersList.FirstOrDefault(u => u.UserId == message.From.Id);
+                        if (user == null)
+                        {
+                            await SendMessageAsync(message.Chat.Id, "No configuration found.");
+                            return;
+                        }
+                        if (File.Exists(Path.Combine(assemblyLocation, user.Login, "wordsDictionary.json")))
+                            await SendFileAsync(message.Chat.Id, Path.Combine(assemblyLocation, user.Login, "wordsDictionary.json"));
+                        else
+                            await SendMessageAsync(message.Chat.Id, "Dictionary file doesn't exist.");
+                        break;
+                            
                     case "/cancel":
                         if (userStep.ContainsKey(message.From.Id))
                         {
@@ -172,7 +212,8 @@ namespace InstaShit.Bot
                         await SendMessageAsync(message.Chat.Id, "Usage:\n" +
                             "/configure - Configures InstaShit bot\n" +
                             "/remove - Unregisters from the bot\n" +
-                            "/cancel - Cancels any ongoing process (configure/remove)");
+                            "/cancel - Cancels any ongoing process (configure/remove)\n" +
+                            "/dictionary - Returns the wordsDictionary.json file");
                         break;
                 }
             }
