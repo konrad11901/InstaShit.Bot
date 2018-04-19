@@ -2,7 +2,6 @@
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using Telegram.Bot;
 using InstaShit.Bot.Models;
 using Newtonsoft.Json;
 using System.Collections.Generic;
