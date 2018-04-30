@@ -23,7 +23,7 @@ namespace InstaShit.Bot
             if (File.Exists(Path.Combine(assemblyLocation, "queue.json")))
             {
                 usersQueue = JsonConvert.DeserializeObject<Queue<QueueEntry>>(File.ReadAllText(Path.Combine(assemblyLocation, "queue.json")));
-                if (DateTime.UtcNow.Hour >= 8)
+                if (DateTime.UtcNow.Hour >= 7)
                     dateTime = DateTime.UtcNow.Date;
             }
             else
@@ -38,7 +38,7 @@ namespace InstaShit.Bot
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (DateTime.UtcNow >= DateTime.UtcNow.Date.AddHours(8) && dateTime != DateTime.UtcNow.Date)
+                if (DateTime.UtcNow >= DateTime.UtcNow.Date.AddHours(7) && dateTime != DateTime.UtcNow.Date)
                 {
                     Log.Write("Refreshing queue...", LogType.Queue);
                     List<User> users = Users.UsersList;
@@ -46,6 +46,12 @@ namespace InstaShit.Bot
                     DateTime tmpDate = DateTime.UtcNow;
                     foreach (User user in users)
                     {
+                        if (SkipUsers.SkipUsersList.Contains(user.Login))
+                        {
+                            Log.Write($"Skipping user {user.Login}", LogType.Queue);
+                            SkipUsers.Remove(user.Login);
+                            continue;
+                        }
                         tmpDate = tmpDate.AddMinutes(rnd.Next(20, 41)).AddSeconds(rnd.Next(0, 60));
                         usersQueue.Enqueue(new QueueEntry() { User = user, ProcessTime = tmpDate });
                         Log.Write($"Queued user {user.Login} at {tmpDate}", LogType.Queue);
@@ -68,7 +74,24 @@ namespace InstaShit.Bot
                             Directory.Delete(Path.Combine(assemblyLocation, entry.User.Login), true);
                             continue;
                         }
-                        InstaShit instaShit = new InstaShit(Path.Combine(assemblyLocation, entry.User.Login));
+                        if (SkipUsers.SkipUsersList.Contains(entry.User.Login))
+                        {
+                            Log.Write($"Skipping user {entry.User.Login}", LogType.Queue);
+                            SkipUsers.Remove(entry.User.Login);
+                            continue;
+                        }
+                        InstaShit instaShit;
+                        try
+                        {
+                            instaShit = new InstaShit(Path.Combine(assemblyLocation, entry.User.Login));
+                        }
+                        catch(Exception ex)
+                        {
+                            Log.Write("Can't create InstaShit object: " + ex, LogType.Queue);
+                            await Communication.SendMessageAsync(entry.User.UserId, "An internal error occured. " +
+                                "It has been reported to the administrator.");
+                            continue;
+                        }
                         Log.Write($"Starting InstaShit for user {entry.User.Login}", LogType.Queue);
                         await Communication.SendMessageAsync(entry.User.UserId, "Starting session.");
                         cancellationToken.ThrowIfCancellationRequested();
@@ -80,6 +103,7 @@ namespace InstaShit.Bot
                                 "is down. If you think it's InstaShit's fault, create an issue on GitHub: " +
                                 "https://github.com/konrad11901/InstaShit.Bot if it applies only to InstaShit.Bot or " +
                                 "https://github.com/konrad11901/InstaShit if it affects all InstaShit apps.");
+                            await Communication.SendMessageAsync(entry.User.UserId, $"Detailed information: {instaShit.ErrorMessage}");
                             Log.Write("Can't solve session, moving to next person", LogType.Queue);
                         }
                         else
@@ -111,10 +135,10 @@ namespace InstaShit.Bot
                     }
                 }
                 TimeSpan span2;
-                if (DateTime.UtcNow.Hour < 8)
-                    span2 = DateTime.UtcNow.Date.AddHours(8) - DateTime.UtcNow;
+                if (DateTime.UtcNow.Hour < 7)
+                    span2 = DateTime.UtcNow.Date.AddHours(7) - DateTime.UtcNow;
                 else
-                    span2 = DateTime.UtcNow.Date.AddDays(1).AddHours(8) - DateTime.UtcNow;
+                    span2 = DateTime.UtcNow.Date.AddDays(1).AddHours(7) - DateTime.UtcNow;
                 Log.Write("Waiting " + (int)span2.TotalMilliseconds + " milliseconds for next queue refresh...", LogType.Queue);
                 await Task.Delay((int)span2.TotalMilliseconds, cancellationToken);
             }

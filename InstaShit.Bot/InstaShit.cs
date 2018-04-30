@@ -11,35 +11,46 @@ namespace InstaShit.Bot
         }
         protected override void Debug(string text)
         {
-            Log.Write(DateTime.UtcNow + ": " + text, LogType.Queue);
+            Log.Write(text, LogType.Queue);
             base.Debug(text);
         }
+        public string ErrorMessage { get; set; }
         public async Task<bool> Process()
         {
-            if (!await TryLoginAsync())
+            try
             {
-                Log.Write(DateTime.UtcNow + ": Can't log in.", LogType.Queue);
-                return false;
-            }
-            Log.Write(DateTime.UtcNow + ": Successfully logged in!", LogType.Queue);
-            while (true)
-            {
-                var answer = await GetAnswerAsync();
-                if (answer == null)
-                    break;
-                int sleepTime = SleepTime;
-                Log.Write($"Sleeping... ({sleepTime}ms)", LogType.Queue);
-                await Task.Delay(sleepTime);
-                Log.Write($"Atempting to answer (\"{answer.AnswerWord}\") question about word \"{answer.Word}\" with id {answer.WordId}", LogType.Queue);
-                if (!await TryAnswerQuestionAsync(answer))
+                if (!await TryLoginAsync())
                 {
-                    Log.Write("Can't answer the question.", LogType.Queue);
+                    Debug("Can't log in.");
+                    ErrorMessage = "An error occured while trying to log in.";
                     return false;
                 }
-                Log.Write("Success!", LogType.Queue);
+                Debug("Successfully logged in!");
+                while (true)
+                {
+                    var answer = await GetAnswerAsync();
+                    if (answer == null)
+                        break;
+                    int sleepTime = SleepTime;
+                    Debug($"Sleeping... ({sleepTime}ms)");
+                    await Task.Delay(sleepTime);
+                    Debug($"Atempting to answer (\"{answer.AnswerWord}\") question about word \"{answer.Word}\" with id {answer.WordId}");
+                    if (!await TryAnswerQuestionAsync(answer))
+                    {
+                        Debug("Can't answer the question.");
+                        ErrorMessage = $"An error occured while trying to answer the question about word \"{answer.Word}\" with id {answer.WordId}";
+                        return false;
+                    }
+                    Debug("Success!");
+                }
+                SaveSessionData();
+                return true;
             }
-            SaveSessionData();
-            return true;
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return false;
+            }
         }
     }
 }

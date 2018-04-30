@@ -52,7 +52,9 @@ namespace InstaShit.Bot
                 {
                     Log.Write($"An error occured, retrying ({ex})", LogType.Communication);
                     if (i == 4)
-                        throw;
+                    {
+                        Log.Write("[CRITICAL] Message can't be sent, please check Telegram status!", LogType.Communication);
+                    }
                 }
             }
         }
@@ -130,7 +132,7 @@ namespace InstaShit.Bot
                     };
                     Users.Add(user);
                     await SendMessageAsync(message.Chat.Id, "User successfully added!\n" +
-                        "You'll be added to queue at the next queue refresh (8:00 UTC every day).");
+                        "You'll be added to queue at the next queue refresh (7:00 UTC every day).");
                 }
                 catch
                 {
@@ -196,21 +198,66 @@ namespace InstaShit.Bot
                             userStep.Add(message.From.Id, 2);
                             await SendMessageAsync(message.Chat.Id, "You can stop automatic InstaShit session " +
                                 "solving if you wish. Please note that this action won't cancel ongoing InstaShit session, " +
-                                "if there's any in progress. Your InstaShit settings file and other data will be removed " +
-                                "within 24 hours.\nIf you want to continue, type /remove again. To cancel, type /cancel.");
+                                "if there's any in progress.\nIf you want to continue, type /remove again. " +
+                                "To cancel, type /cancel.");
                         }
                         else if (userStep[message.From.Id] == 2)
                         {
                             userStep.Remove(message.From.Id);
                             User userToRemove = Users.UsersList.Find(u => u.UserId == message.From.Id);
                             Users.Remove(userToRemove);
-                            await SendMessageAsync(message.Chat.Id, "Successfully removed.");
+                            try
+                            {
+                                Directory.Delete(Path.Combine(assemblyLocation, userToRemove.Login), true);
+                                await SendMessageAsync(message.Chat.Id, "Successfully removed.");
+                            }
+                            catch
+                            {
+                                await Task.Delay(3000);
+                                try
+                                {
+                                    Directory.Delete(Path.Combine(assemblyLocation, userToRemove.Login), true);
+                                    await SendMessageAsync(message.Chat.Id, "Successfully removed.");
+                                }
+                                catch(Exception ex)
+                                {
+                                    Log.Write("ERROR: " + ex, LogType.Communication);
+                                    await SendMessageAsync(message.Chat.Id, "An error occured while trying to remove " +
+                                        "your files. The administrator has been notifies about this issue.");
+                                }
+                            }
+                        }
+                        break;
+                    case "/skip":
+                        if (!Users.UsersList.Any(u => u.UserId == message.From.Id))
+                        {
+                            await SendMessageAsync(message.Chat.Id, "No configuration found.");
+                            return;
+                        }
+                        if (SkipUsers.SkipUsersList.Contains(Users.UsersList.Find(u => u.UserId == message.From.Id).Login))
+                        {
+                            await SendMessageAsync(message.Chat.Id, "Already on the skip list.");
+                            return;
+                        }
+                        if (!userStep.ContainsKey(message.From.Id))
+                        {
+                            userStep.Add(message.From.Id, 3);
+                            await SendMessageAsync(message.Chat.Id, "You can skip the next InstaShit session if you wish. " +
+                                " Please note that this action won't cancel ongoing InstaShit session, if there's any in progress." +
+                                "\nIf you want to continue, type /skip again. To cancel, type /cancel.");
+                        }
+                        else if (userStep[message.From.Id] == 2)
+                        {
+                            userStep.Remove(message.From.Id);
+                            SkipUsers.Add(Users.UsersList.Find(u => u.UserId == message.From.Id).Login);
+                            await SendMessageAsync(message.From.Id, "Successfully added to skip list.");
                         }
                         break;
                     default:
                         await SendMessageAsync(message.Chat.Id, "Usage:\n" +
                             "/configure - Configures InstaShit bot\n" +
                             "/remove - Unregisters from the bot\n" +
+                            "/skip - Skips next InstaShit session\n" +
                             "/cancel - Cancels any ongoing process (configure/remove)\n" +
                             "/dictionary - Returns the wordsDictionary.json file");
                         break;

@@ -37,6 +37,18 @@ namespace InstaShit.Bot
             {
                 Console.Write("> ");
                 string input = Console.ReadLine();
+                if (queueTask.IsFaulted || queueTask.IsCanceled)
+                {
+                    try
+                    {
+                        await queueTask;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Unhandled Exception: " + ex);
+                        break;
+                    }
+                }
                 bool shouldBreak = false;
                 switch(input.ToLower())
                 {
@@ -55,22 +67,8 @@ namespace InstaShit.Bot
                         foreach (User user in Users.UsersList)
                             await Communication.SendMessageAsync(user.UserId, message);
                         break;
-                    //TODO: this shouldn't be here, it's ugly
                     case "/check":
-                        if (queueTask.IsFaulted || queueTask.IsCanceled)
-                        {
-                            try
-                            {
-                                await queueTask;
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine("Unhandled Exception: " + ex);
-                                shouldBreak = true;
-                            }
-                        }
-                        else
-                            Console.WriteLine("OK");
+                        Console.WriteLine("OK");
                         break;
                     case "/queuerefresh":
                         Console.WriteLine("Cancelling current queue task. Please be patient.");
@@ -87,6 +85,9 @@ namespace InstaShit.Bot
                             queueTask = queue.ProcessQueue(source.Token);
                             Console.WriteLine("Done!");
                         }
+                        break;
+                    case "/skip":
+                        SkipUser();
                         break;
                     default:
                         Console.WriteLine("Unknown command.");
@@ -120,6 +121,11 @@ namespace InstaShit.Bot
                 File.WriteAllText(Path.Combine(assemblyLocation, "settings.json"), JsonConvert.SerializeObject(settings, Formatting.Indented));
             return settings;
         }
+        private static void SkipUser()
+        {
+            string login = GetStringFromUser("User login");
+            SkipUsers.Add(login);
+        }
         private static void RemoveUser()
         {
             try
@@ -127,10 +133,12 @@ namespace InstaShit.Bot
                 string login = GetStringFromUser("User login");
                 User userToRemove = Users.UsersList.Find(u => u.Login == login);
                 Users.Remove(userToRemove);
+                Directory.Delete(Path.Combine(assemblyLocation, login), true);
             }
-            catch
+            catch (Exception ex)
             {
                 Console.WriteLine("Error!");
+                Console.WriteLine(ex);
             }
         }
         private static void AddUser()
