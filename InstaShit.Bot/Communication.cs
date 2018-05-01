@@ -198,7 +198,7 @@ namespace InstaShit.Bot
                             userStep.Add(message.From.Id, 2);
                             await SendMessageAsync(message.Chat.Id, "You can stop automatic InstaShit session " +
                                 "solving if you wish. Please note that this action won't cancel ongoing InstaShit session, " +
-                                "if there's any in progress.\nIf you want to continue, type /remove again. " +
+                                "if there's any.\nIf you want to continue, type /remove again. " +
                                 "To cancel, type /cancel.");
                         }
                         else if (userStep[message.From.Id] == 2)
@@ -243,7 +243,7 @@ namespace InstaShit.Bot
                         {
                             userStep.Add(message.From.Id, 3);
                             await SendMessageAsync(message.Chat.Id, "You can skip the next InstaShit session if you wish. " +
-                                " Please note that this action won't cancel ongoing InstaShit session, if there's any in progress." +
+                                " Please note that this action won't cancel ongoing InstaShit session, if there's any." +
                                 "\nIf you want to continue, type /skip again. To cancel, type /cancel.");
                         }
                         else if (userStep[message.From.Id] == 3)
@@ -256,9 +256,9 @@ namespace InstaShit.Bot
                     default:
                         await SendMessageAsync(message.Chat.Id, "Usage:\n" +
                             "/configure - Configures InstaShit bot\n" +
-                            "/remove - Unregisters from the bot\n" +
                             "/skip - Skips next InstaShit session\n" +
-                            "/cancel - Cancels any ongoing process (configure/remove)\n" +
+                            "/remove - Unregisters from the bot\n" +
+                            "/cancel - Cancels any ongoing process (configure/remove/skip)\n" +
                             "/dictionary - Returns the wordsDictionary.json file");
                         break;
                 }
