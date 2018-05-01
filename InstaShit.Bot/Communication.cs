@@ -246,7 +246,7 @@ namespace InstaShit.Bot
                                 " Please note that this action won't cancel ongoing InstaShit session, if there's any in progress." +
                                 "\nIf you want to continue, type /skip again. To cancel, type /cancel.");
                         }
-                        else if (userStep[message.From.Id] == 2)
+                        else if (userStep[message.From.Id] == 3)
                         {
                             userStep.Remove(message.From.Id);
                             SkipUsers.Add(Users.UsersList.Find(u => u.UserId == message.From.Id).Login);
