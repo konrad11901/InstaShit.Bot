@@ -132,7 +132,7 @@ namespace InstaShit.Bot
                     };
                     Users.Add(user);
                     await SendMessageAsync(message.Chat.Id, "User successfully added!\n" +
-                        "You'll be added to queue at the next queue refresh (7:00 UTC every day).");
+                        "You'll be added to queue at the next queue refresh (9:00 Polish time every day).");
                 }
                 catch
                 {

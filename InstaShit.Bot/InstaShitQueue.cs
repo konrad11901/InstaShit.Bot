@@ -56,7 +56,7 @@ namespace InstaShit.Bot
                         usersQueue.Enqueue(new QueueEntry() { User = user, ProcessTime = tmpDate });
                         Log.Write($"Queued user {user.Login} at {tmpDate}", LogType.Queue);
                         await Communication.SendMessageAsync(user.UserId, "Your InstaShit session " +
-                            $"will be started at {tmpDate} UTC (with max. 1 minute delay). Please don't attempt " +
+                            $"will be started at {tmpDate.AddHours(2).ToString("HH:mm:ss")} Polish time (with max. 1 minute delay). Please don't attempt " +
                             "to start Insta.Ling session at this time, even from other InstaShit apps. " +
                             "You'll be notified when your session finishes.");
                     }
