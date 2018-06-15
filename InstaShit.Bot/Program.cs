@@ -24,6 +24,8 @@ namespace InstaShit.Bot
         }
         static async Task Main(string[] args)
         {
+            Console.WriteLine("InstaShit.Bot - Telegram bot for Insta.Ling which automatically solves daily sessions");
+            Console.WriteLine("Created by Konrad Krawiec \n");
             Settings settings;
             if (File.Exists(Path.Combine(assemblyLocation, "settings.json")))
                 settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(Path.Combine(assemblyLocation, "settings.json")));
@@ -33,6 +35,7 @@ namespace InstaShit.Bot
             InstaShitQueue queue = new InstaShitQueue();
             CancellationTokenSource source = new CancellationTokenSource();
             Task queueTask = queue.ProcessQueue(source.Token);
+            Console.WriteLine("Successfully started.");
             while(true)
             {
                 Console.Write("> ");
@@ -89,6 +92,16 @@ namespace InstaShit.Bot
                     case "/skip":
                         SkipUser();
                         break;
+                    case "/help":
+                        Console.WriteLine("Usage:");
+                        Console.WriteLine("/exit - Saves users queue and closes InstaShit.Bot");
+                        Console.WriteLine("/broadcast - Broadcasts a message to all users");
+                        Console.WriteLine("/queuerefresh - Forces queue refresh");
+                        Console.WriteLine("/add - Adds user to the bot");
+                        Console.WriteLine("/skip - Skips user's next session");
+                        Console.WriteLine("/remove - Removes user from the bot");
+                        break;
+
                     default:
                         Console.WriteLine("Unknown command.");
                         break;
@@ -114,7 +127,7 @@ namespace InstaShit.Bot
             Console.WriteLine("Please enter the following data:");
             var settings = new Settings
             {
-                TelegramBotToken = GetStringFromUser("Telegram bot API token: ")
+                TelegramBotToken = GetStringFromUser("Telegram bot API token")
             };
             Console.Write("Save these settings (y/n)? ");
             if (CanContinue())
@@ -182,7 +195,7 @@ namespace InstaShit.Bot
             {
                 Login = settings.Login,
                 UserType = UserType.Telegram,
-                UserId = GetIntFromUser("User ID", 0, int.MaxValue)
+                UserId = GetIntFromUser("User ID (-1 = dummy)", 0, int.MaxValue)
             };
             Directory.CreateDirectory(Path.Combine(assemblyLocation, user.Login));
             File.WriteAllText(Path.Combine(assemblyLocation, user.Login, "settings.json"), JsonConvert.SerializeObject(settings, Formatting.Indented));

@@ -130,8 +130,11 @@ namespace InstaShit.Bot
                     if(usersQueue.Count > 0)
                     {
                         TimeSpan span = usersQueue.Peek().ProcessTime - DateTime.UtcNow;
-                        Log.Write("Waiting " + (int)span.TotalMilliseconds + " milliseconds for next person...", LogType.Queue);
-                        await Task.Delay((int)span.TotalMilliseconds, cancellationToken);
+                        if(span.TotalMilliseconds > 0)
+                        {
+                            Log.Write("Waiting " + (int)span.TotalMilliseconds + " milliseconds for next person...", LogType.Queue);
+                            await Task.Delay((int)span.TotalMilliseconds, cancellationToken);
+                        }
                     }
                 }
                 TimeSpan span2;
