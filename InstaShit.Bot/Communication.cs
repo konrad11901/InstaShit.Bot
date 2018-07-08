@@ -9,30 +9,44 @@ using Newtonsoft.Json;
 using InstaShit.Bot.Models;
 using System.IO;
 using System.Reflection;
-using System.Linq;
 using System.Threading;
 
 namespace InstaShit.Bot
 {
-    public static class Communication
+    public class Communication
     {
-        public static TelegramBotClient Bot;
-        private static Dictionary<int, int> userStep = new Dictionary<int, int>();
-        private static string _token;
-        private static readonly string assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-        public static void Start(string token)
+        public TelegramBotClient Bot;
+        private Dictionary<int, int> userStep = new Dictionary<int, int>();
+        private readonly string token;
+        private readonly string assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+        readonly SafeList<User> users;
+        readonly SafeList<string> usersToSkip;
+        readonly SafeList<Tuple<string, DateTime, string>> whitelist;
+        readonly bool useWhitelist = false;
+        public Communication(string token, SafeList<User> users, SafeList<string> usersToSkip,
+            SafeList<Tuple<string, DateTime, string>> whitelist) : this(token, users, usersToSkip)
         {
+            useWhitelist = true;
+            this.whitelist = whitelist;
+        }
+        public Communication(string token, SafeList<User> users, SafeList<string> usersToSkip)
+        {
+            this.token = token;
+            this.users = users;
+            this.usersToSkip = usersToSkip;
             Bot = new TelegramBotClient(token);
-            _token = token;
             Bot.OnMessage += BotOnMessageReceived;
+        }
+        public void Start()
+        {
             Bot.StartReceiving();
         }
-        public static void Close()
+        public void Close()
         {
             Bot.StopReceiving();
         }
         // This method is an attempt to solve the request timed out issue
-        public static async Task SendMessageAsync(long userId, string message)
+        public async Task SendMessageAsync(long userId, string message)
         {
             Log.Write($"Trying to send message \"{message}\" to user {userId.ToString()}", LogType.Communication);
             if (userId == -1)
@@ -58,7 +72,7 @@ namespace InstaShit.Bot
                 }
             }
         }
-        private static async Task SendFileAsync(long userId, string filePath)
+        private async Task SendFileAsync(long userId, string filePath)
         {
             for (int i = 0; i < 5; i++)
             {
@@ -76,7 +90,7 @@ namespace InstaShit.Bot
                 }
             }
         }
-        private static async void BotOnMessageReceived(object sender, MessageEventArgs args)
+        private async void BotOnMessageReceived(object sender, MessageEventArgs args)
         {
             Telegram.Bot.Types.Message message = args.Message;
             if(message.Type == MessageType.Document && userStep.ContainsKey(message.From.Id) && userStep[message.From.Id] == 1)
@@ -86,7 +100,7 @@ namespace InstaShit.Bot
                 {
                     string content;
                     using (var client = new WebClient())
-                        content = await client.DownloadStringTaskAsync($"https://api.telegram.org/file/bot{_token}/{file.FilePath}");
+                        content = await client.DownloadStringTaskAsync($"https://api.telegram.org/file/bot{token}/{file.FilePath}");
                     InstaShitCore.Settings settings = JsonConvert.DeserializeObject<InstaShitCore.Settings>(content);
                     if(Directory.Exists(Path.Combine(assemblyLocation, settings.Login)))
                     {
@@ -127,10 +141,9 @@ namespace InstaShit.Bot
                     User user = new User()
                     {
                         Login = settings.Login,
-                        UserId = message.From.Id,
-                        UserType = UserType.Telegram
+                        UserId = message.From.Id
                     };
-                    Users.Add(user);
+                    users.Add(user);
                     await SendMessageAsync(message.Chat.Id, "User successfully added!\n" +
                         "You'll be added to queue at the next queue refresh (9:00 Polish time every day).");
                 }
@@ -151,24 +164,35 @@ namespace InstaShit.Bot
                             " type /configure. For more information, type /help.");
                         break;
                     case "/configure":
-                        if(Users.UsersList.Any(u => u.UserId == message.From.Id))
+                        if(users.Any(u => u.UserId == message.From.Id))
                         {
                             await SendMessageAsync(message.Chat.Id, "Already configured.");
                             return;
                         }
                         if(!userStep.ContainsKey(message.From.Id))
                         {
-                            userStep.Add(message.From.Id, 1);
-                            await SendMessageAsync(message.Chat.Id, "Please attach the InstaShit settings file.\n" +
-                                                   "You can use InstaShit.CLI to generate it. You can also " +
-                                                   "share settings directly from InstaShit.Android " +
-                                                   "(since version 0.5) - just go to \"Edit settings\", \"Advanced mode\" " +
-                                                   "and touch \"Share\" button. Ability to create new settings directly " +
-                                                   "from bot coming soon!\nType /cancel to abort this action.");
+                            if(useWhitelist)
+                            {
+                                userStep.Add(message.From.Id, 4);
+                                await SendMessageAsync(message.Chat.Id, "This instance of InstaShit.Bot has whitelisting " +
+                                    "enabled. Please enter the unique key received from the server administrator. " +
+                                    "If you don't have it, contact server's owner or use another instance of the " +
+                                    "bot which is publically available.\nTo abort, type /cancel.");
+                            }
+                            else
+                            {
+                                userStep.Add(message.From.Id, 1);
+                                await SendMessageAsync(message.Chat.Id, "Please attach the InstaShit settings file.\n" +
+                                                       "You can use InstaShit.CLI to generate it. You can also " +
+                                                       "share settings directly from InstaShit.Android " +
+                                                       "(since version 0.5) - just go to \"Edit settings\", \"Advanced mode\" " +
+                                                       "and touch \"Share\" button. Ability to create new settings directly " +
+                                                       "from bot coming soon!\nType /cancel to abort this action.");
+                            }
                         }
                         break;
                     case "/dictionary":
-                        var user = Users.UsersList.FirstOrDefault(u => u.UserId == message.From.Id);
+                        var user = users.FirstOrDefault(u => u.UserId == message.From.Id);
                         if (user == null)
                         {
                             await SendMessageAsync(message.Chat.Id, "No configuration found.");
@@ -188,7 +212,7 @@ namespace InstaShit.Bot
                         }
                         break;
                     case "/remove":
-                        if(!Users.UsersList.Any(u => u.UserId == message.From.Id))
+                        if(!users.Any(u => u.UserId == message.From.Id))
                         {
                             await SendMessageAsync(message.Chat.Id, "No configuration found.");
                             return;
@@ -204,8 +228,8 @@ namespace InstaShit.Bot
                         else if (userStep[message.From.Id] == 2)
                         {
                             userStep.Remove(message.From.Id);
-                            User userToRemove = Users.UsersList.Find(u => u.UserId == message.From.Id);
-                            Users.Remove(userToRemove);
+                            User userToRemove = users.Find(u => u.UserId == message.From.Id);
+                            users.Remove(userToRemove);
                             try
                             {
                                 Directory.Delete(Path.Combine(assemblyLocation, userToRemove.Login), true);
@@ -229,12 +253,12 @@ namespace InstaShit.Bot
                         }
                         break;
                     case "/skip":
-                        if (!Users.UsersList.Any(u => u.UserId == message.From.Id))
+                        if (!users.Any(u => u.UserId == message.From.Id))
                         {
                             await SendMessageAsync(message.Chat.Id, "No configuration found.");
                             return;
                         }
-                        if (SkipUsers.SkipUsersList.Contains(Users.UsersList.Find(u => u.UserId == message.From.Id).Login))
+                        if (usersToSkip.Contains(users.Find(u => u.UserId == message.From.Id).Login))
                         {
                             await SendMessageAsync(message.Chat.Id, "Already on the skip list.");
                             return;
@@ -249,11 +273,31 @@ namespace InstaShit.Bot
                         else if (userStep[message.From.Id] == 3)
                         {
                             userStep.Remove(message.From.Id);
-                            SkipUsers.Add(Users.UsersList.Find(u => u.UserId == message.From.Id).Login);
-                            await SendMessageAsync(message.From.Id, "Successfully added to skip list.");
+                            usersToSkip.Add(users.Find(u => u.UserId == message.From.Id).Login);
+                            await SendMessageAsync(message.Chat.Id, "Successfully added to skip list.");
                         }
                         break;
                     default:
+                        if (userStep.ContainsKey(message.From.Id) && userStep[message.From.Id] == 4)
+                        {
+                            if(whitelist.Any(t => t.Item1 == message.Text))
+                            {
+                                whitelist.Remove(whitelist.Find(t => t.Item1 == message.Text));
+                                userStep[message.From.Id] = 1;
+                                await SendMessageAsync(message.Chat.Id, "Success!");
+                                await SendMessageAsync(message.Chat.Id, "Please attach the InstaShit settings file.\n" +
+                                    "You can use InstaShit.CLI to generate it. You can also share settings directly " +
+                                    "from InstaShit.Android (since version 0.5) - just go to \"Edit settings\", " +
+                                    "\"Advanced mode\" and touch \"Share\" button. Ability to create new settings " +
+                                    "using the bot coming soon!\nType /cancel to abort this action (you'll need " +
+                                    "a new unique key if you try to configure the bot again in the future).");
+                            }
+                            else
+                            {
+                                await SendMessageAsync(message.Chat.Id, "Incorrect key.");
+                            }
+                            break;  
+                        }
                         await SendMessageAsync(message.Chat.Id, "Usage:\n" +
                             "/configure - Configures InstaShit bot\n" +
                             "/skip - Skips next InstaShit session\n" +

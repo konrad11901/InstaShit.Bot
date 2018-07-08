@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -13,13 +12,19 @@ namespace InstaShit.Bot
 {
     public class InstaShitQueue
     {
-        private string assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+        private readonly string assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
         private Queue<QueueEntry> usersQueue;
         private DateTime dateTime = DateTime.UtcNow.Date.AddDays(-1);
         private Random rnd = new Random();
         private readonly object _lock = new object();
-        public InstaShitQueue()
+        private readonly SafeList<User> users;
+        private readonly SafeList<string> usersToSkip;
+        private readonly Communication communication;
+        public InstaShitQueue(SafeList<User> users, SafeList<string> usersToSkip, Communication communication)
         {
+            this.users = users;
+            this.usersToSkip = usersToSkip;
+            this.communication = communication;
             if (File.Exists(Path.Combine(assemblyLocation, "queue.json")))
             {
                 usersQueue = JsonConvert.DeserializeObject<Queue<QueueEntry>>(File.ReadAllText(Path.Combine(assemblyLocation, "queue.json")));
@@ -41,21 +46,21 @@ namespace InstaShit.Bot
                 if (DateTime.UtcNow >= DateTime.UtcNow.Date.AddHours(7) && dateTime != DateTime.UtcNow.Date)
                 {
                     Log.Write("Refreshing queue...", LogType.Queue);
-                    List<User> users = Users.UsersList;
+                    List<User> usersCopy = users.ShallowCopy();
                     users.Shuffle();
                     DateTime tmpDate = DateTime.UtcNow;
-                    foreach (User user in users)
+                    foreach (User user in usersCopy)
                     {
-                        if (SkipUsers.SkipUsersList.Contains(user.Login))
+                        if (usersToSkip.Contains(user.Login))
                         {
                             Log.Write($"Skipping user {user.Login}", LogType.Queue);
-                            SkipUsers.Remove(user.Login);
+                            usersToSkip.Remove(user.Login);
                             continue;
                         }
-                        tmpDate = tmpDate.AddMinutes(rnd.Next(20, 41)).AddSeconds(rnd.Next(0, 60));
+                        tmpDate = tmpDate.AddMinutes(rnd.Next(15, 41)).AddSeconds(rnd.Next(0, 60));
                         usersQueue.Enqueue(new QueueEntry() { User = user, ProcessTime = tmpDate });
                         Log.Write($"Queued user {user.Login} at {tmpDate}", LogType.Queue);
-                        await Communication.SendMessageAsync(user.UserId, "Your InstaShit session " +
+                        await communication.SendMessageAsync(user.UserId, "Your InstaShit session " +
                             $"will be started at {tmpDate.AddHours(2).ToString("HH:mm:ss")} Polish time (with max. 1 minute delay). Please don't attempt " +
                             "to start Insta.Ling session at this time, even from other InstaShit apps. " +
                             "You'll be notified when your session finishes.");
@@ -69,15 +74,12 @@ namespace InstaShit.Bot
                     if(DateTime.UtcNow >= entry.ProcessTime)
                     {
                         usersQueue.Dequeue();
-                        if (!Users.UsersList.Any(u => u.Login == entry.User.Login))
-                        {
-                            Directory.Delete(Path.Combine(assemblyLocation, entry.User.Login), true);
+                        if (!users.Any(u => u.Login == entry.User.Login))
                             continue;
-                        }
-                        if (SkipUsers.SkipUsersList.Contains(entry.User.Login))
+                        if (usersToSkip.Contains(entry.User.Login))
                         {
                             Log.Write($"Skipping user {entry.User.Login}", LogType.Queue);
-                            SkipUsers.Remove(entry.User.Login);
+                            usersToSkip.Remove(entry.User.Login);
                             continue;
                         }
                         InstaShit instaShit;
@@ -88,28 +90,28 @@ namespace InstaShit.Bot
                         catch(Exception ex)
                         {
                             Log.Write("Can't create InstaShit object: " + ex, LogType.Queue);
-                            await Communication.SendMessageAsync(entry.User.UserId, "An internal error occured. " +
+                            await communication.SendMessageAsync(entry.User.UserId, "An internal error occured. " +
                                 "It has been reported to the administrator.");
                             continue;
                         }
                         Log.Write($"Starting InstaShit for user {entry.User.Login}", LogType.Queue);
-                        await Communication.SendMessageAsync(entry.User.UserId, "Starting session.");
+                        await communication.SendMessageAsync(entry.User.UserId, "Starting session.");
                         cancellationToken.ThrowIfCancellationRequested();
                         if(!await instaShit.Process())
                         {
-                            await Communication.SendMessageAsync(entry.User.UserId, "An error occured " +
+                            await communication.SendMessageAsync(entry.User.UserId, "An error occured " +
                                 "while processing your session. Please try to solve session using " +
                                 "InstaShit.CLI or InstaShit.Android. Please also check if Insta.Ling website " +
                                 "is down. If you think it's InstaShit's fault, create an issue on GitHub: " +
                                 "https://github.com/konrad11901/InstaShit.Bot if it applies only to InstaShit.Bot or " +
-                                "https://github.com/konrad11901/InstaShit if it affects all InstaShit apps.");
-                            await Communication.SendMessageAsync(entry.User.UserId, $"Detailed information: {instaShit.ErrorMessage}");
+                                "https://github.com/konrad11901/InstaShitCore if it affects all InstaShit apps.");
+                            await communication.SendMessageAsync(entry.User.UserId, $"Detailed information: {instaShit.ErrorMessage}");
                             Log.Write("Can't solve session, moving to next person", LogType.Queue);
                         }
                         else
                         {
                             Log.Write($" Session finished", LogType.Queue);
-                            await Communication.SendMessageAsync(entry.User.UserId, "Session successfully " +
+                            await communication.SendMessageAsync(entry.User.UserId, "Session successfully " +
                                 "finished.");
                             var childResults = await instaShit.GetResultsAsync();
                             StringBuilder messageToSend = new StringBuilder();
@@ -123,7 +125,7 @@ namespace InstaShit.Bot
                             messageToSend.AppendLine($"Extracurricular words in current edition: {childResults.ParentWords}");
                             messageToSend.AppendLine($"Mark as of today at least: {childResults.CurrrentMark}");
                             messageToSend.Append($"Days until the end of this week: {childResults.WeekRemainingDays}");
-                            await Communication.SendMessageAsync(entry.User.UserId, messageToSend.ToString());
+                            await communication.SendMessageAsync(entry.User.UserId, messageToSend.ToString());
                         }
                         cancellationToken.ThrowIfCancellationRequested();
                     }
