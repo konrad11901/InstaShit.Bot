@@ -5,9 +5,14 @@ namespace InstaShit.Bot
 {
     class InstaShit : InstaShitCore.InstaShitCore
     {
-        public InstaShit(string baseLocation) : base(baseLocation)
+        private readonly string baseLocation;
+        public InstaShit(string baseLocation) : base(GetInstaShitData(baseLocation))
         {
-
+            this.baseLocation = baseLocation;
+        }
+        public InstaShit(InstaShitCore.Settings settings) : base(settings)
+        {
+            this.baseLocation = "";
         }
         protected override void Debug(string text)
         {
@@ -43,7 +48,7 @@ namespace InstaShit.Bot
                     }
                     Debug("Success!");
                 }
-                SaveSessionData();
+                SaveSessionData(baseLocation);
                 return true;
             }
             catch (Exception ex)

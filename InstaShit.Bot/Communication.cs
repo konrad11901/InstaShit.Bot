@@ -128,15 +128,14 @@ namespace InstaShit.Bot
                             "MaximumSleepTime must be greater than MinimumSleepTime.");
                         return;
                     }
-                    Directory.CreateDirectory(Path.Combine(assemblyLocation, settings.Login));
-                    File.WriteAllText(Path.Combine(assemblyLocation, settings.Login, "settings.json"), JsonConvert.SerializeObject(settings, Formatting.Indented));
-                    InstaShit instaShit = new InstaShit(Path.Combine(assemblyLocation, settings.Login));
+                    InstaShit instaShit = new InstaShit(settings);
                     if(!await instaShit.TryLoginAsync())
                     {
-                        Directory.Delete(Path.Combine(assemblyLocation, settings.Login), true);
                         await SendMessageAsync(message.Chat.Id, "Incorrect login or password.");
                         return;
                     }
+                    Directory.CreateDirectory(Path.Combine(assemblyLocation, settings.Login));
+                    File.WriteAllText(Path.Combine(assemblyLocation, settings.Login, "settings.json"), JsonConvert.SerializeObject(settings, Formatting.Indented));
                     userStep.Remove(message.From.Id);
                     User user = new User()
                     {
