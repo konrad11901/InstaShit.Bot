@@ -2,7 +2,12 @@
 
 [![Build Status](https://travis-ci.org/konrad11901/InstaShit.Bot.svg?branch=master)](https://travis-ci.org/konrad11901/InstaShit.Bot)
 
-Bot for InstaShit available on Telegram and (in the future) Facebook
+Bot for InstaShit available on Telegram.
 
-## TODO
-* Add support for Facebook
+## Support status
+
+This repository has **limited** support and the development of InstaShit.Bot is currently suspended. This **does not** include InstaShitCore updates, which will still be provided.
+
+You are still welcome to open new issues (but please note that I'll not accept feature requests) and create pull requests.
+
+Public instance of [InstaShit.Bot](https://t.me/InstaShitBot) is a seperately developed, closed-source fork of this repository. Users of this instance are asked to report bugs and other issued through support channels (use */support* command for more details).
