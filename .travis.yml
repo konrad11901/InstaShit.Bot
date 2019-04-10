@@ -1,5 +1,6 @@
 language: csharp
 mono: none
-dotnet: 2.1.301
+dist: xenial
+dotnet: 2.2.105
 script:
  - dotnet build InstaShit.Bot/
