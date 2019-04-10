@@ -22,6 +22,23 @@ namespace InstaShit.Bot
             else
                 list = new List<T>();
         }
+        
+        public T this[int key]
+        {
+            get
+            {
+                lock(_lock)
+                    return list[key];
+            }
+            set
+            {
+                lock (_lock)
+                {
+                    list[key] = value;
+                    Write();
+                }
+            }
+        }
 
         public void Add(T item)
         {
