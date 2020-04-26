@@ -10,4 +10,4 @@ This repository has **limited** support and the development of InstaShit.Bot is 
 
 You are still welcome to open new issues (but please note that I'll not accept feature requests) and create pull requests.
 
-[Public instance](https://t.me/InstaShitBot) of InstaShit.Bot is a seperately developed, closed-source fork of this repository. Users of this instance are asked to report bugs and other issued through support channels (use */support* command for more details).
+[Public instance](https://t.me/InstaShitBot) of InstaShit.Bot is currently not available.
