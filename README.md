@@ -6,8 +6,5 @@ Bot for InstaShit available on Telegram.
 
 ## Support status
 
-This repository has **limited** support and the development of InstaShit.Bot is currently suspended. This **does not** apply to bug fixes and InstaShitCore updates, which will still be provided.
-
-You are still welcome to open new issues (but please note that I'll not accept feature requests) and create pull requests.
-
-[Public instance](https://t.me/InstaShitBot) of InstaShit.Bot is currently not available.
+The whole project is discontinued and will not receive any updates. Insta.Ling's authors have introduced breaking changes since the InstaShit's development.  
+If you wish to work on this project, feel free to fork any of the InstaShit's repositories.
